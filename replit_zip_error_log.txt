@@ -1,0 +1,3 @@
+{"error":".zip archives do not support non-regular files","level":"error","msg":"unable to write file .cache/replit/modules/python-3.10:v35-20231229-5b1e996","time":"2024-01-01T20:41:04Z"}
+{"error":".zip archives do not support non-regular files","level":"error","msg":"unable to write file temp/lib64","time":"2024-01-01T20:41:32Z"}
+{"error":".zip archives do not support non-regular files","level":"error","msg":"unable to write file venv/lib64","time":"2024-01-01T20:42:19Z"}
