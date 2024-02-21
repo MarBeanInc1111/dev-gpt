@@ -28,7 +28,7 @@ class PythonDevAssistant:
     return ChatOpenAI(streaming=True,
                       callbacks=[StreamingStdOutCallbackHandler()],
                       temperature=0,
-                      model="gpt-4")
+                      model="gpt-4-turbo-preview")
 
   def create_venv(self):
     create(self.venv_dir, with_pip=True)
