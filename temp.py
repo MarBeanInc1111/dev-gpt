@@ -1,58 +1,62 @@
-import ui
-import sound
-import random
+import yfinance as yf
+import pandas as pd
+import numpy as np
 
-# Define the slot symbols
-symbols = ['🍒', '🍋', '🍊', '🍉', '🍇', '🍓', '7️⃣']
+# Install necessary dependencies
+# pip install yfinance pandas numpy
 
-def spin(sender, slot1, slot2, slot3, result_label):
-    """Handle the spin button press."""
-    # Randomly select a symbol for each slot
-    slot1.text = random.choice(symbols)
-    slot2.text = random.choice(symbols)
-    slot3.text = random.choice(symbols)
-    
-    # Play a sound
-    sound.play_effect('arcade:Coin_2')
-    
-    # Check for win
-    if slot1.text == slot2.text == slot3.text:
-        result_label.text = 'You win!'
-        sound.play_effect('arcade:Powerup_2')
+def fetch_stock_data(ticker, period="1mo", interval="1d"):
+    stock = yf.Ticker(ticker)
+    hist = stock.history(period=period, interval=interval)
+    return hist
+
+def calculate_technical_indicators(data):
+    # SMA, EMA, RSI, and MACD as before
+    calculate_sma_ema_rsi_macd(data)
+    # Bollinger Bands
+    data['Middle Band'] = data['Close'].rolling(window=20).mean()
+    data['Upper Band'] = data['Middle Band'] + 1.96 * data['Close'].rolling(window=20).std()
+    data['Lower Band'] = data['Middle Band'] - 1.96 * data['Close'].rolling(window=20).std()
+    # Volume (Normalized)
+    data['Volume_norm'] = data['Volume'] / data['Volume'].max()
+
+def calculate_sma_ema_rsi_macd(data):
+    data['SMA'] = data['Close'].rolling(window=20).mean()
+    data['EMA'] = data['Close'].ewm(span=20, adjust=False).mean()
+    delta = data['Close'].diff(1)
+    gain = (delta.where(delta > 0, 0)).rolling(window=14).mean()
+    loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
+    rs = gain / loss
+    data['RSI'] = 100 - (100 / (1 + rs))
+    exp1 = data['Close'].ewm(span=12, adjust=False).mean()
+    exp2 = data['Close'].ewm(span=26, adjust=False).mean()
+    data['MACD'] = exp1 - exp2
+    data['Signal_Line'] = data['MACD'].ewm(span=9, adjust=False).mean()
+
+def alert_buy_sell(data):
+    # Enhanced strategy considering Bollinger Bands and Volume
+    if (data['MACD'].iloc[-1] > data['Signal_Line'].iloc[-1] and
+        data['RSI'].iloc[-1] < 70 and
+        data['Close'].iloc[-1] > data['Upper Band'].iloc[-1] and
+        data['Volume_norm'].iloc[-1] > 0.8):  # High volume
+        print("Strong Buy Signal: Breakout with high volume.")
+    elif (data['MACD'].iloc[-1] < data['Signal_Line'].iloc[-1] and
+          data['RSI'].iloc[-1] > 30 and
+          data['Close'].iloc[-1] < data['Lower Band'].iloc[-1]):
+        print("Strong Sell Signal: Breakdown.")
     else:
-        result_label.text = 'Try again!'
+        print("Hold: No clear buy/sell signal.")
 
 def main():
-    # Create a UI
-    view = ui.View()
-    view.name = 'Slot Machine'
-    view.background_color = 'white'
+    ticker = "BTC-USD"  # Focusing on crypto
+    period = "3mo"  # Increased period for more data
+    interval = "1d"
+    
+    stock_data = fetch_stock_data(ticker, period, interval)
+    calculate_technical_indicators(stock_data)
+    alert_buy_sell(stock_data)
+    
+    print(stock_data.tail())
 
-    # Create slot labels
-    slot1 = ui.Label(frame=(50, 100, 80, 80), font=('Helvetica', 50), alignment=ui.ALIGN_CENTER)
-    slot2 = ui.Label(frame=(150, 100, 80, 80), font=('Helvetica', 50), alignment=ui.ALIGN_CENTER)
-    slot3 = ui.Label(frame=(250, 100, 80, 80), font=('Helvetica', 50), alignment=ui.ALIGN_CENTER)
-
-    # Create a spin button
-    spin_button = ui.Button(title='Spin', frame=(130, 250, 120, 50))
-    spin_button.background_color = 'lightblue'
-    spin_button.tint_color = 'white'
-    spin_button.corner_radius = 5
-    # Partial function to pass additional arguments to the spin function
-    spin_button.action = lambda sender: spin(sender, slot1, slot2, slot3, result_label)
-
-    # Create a result label
-    result_label = ui.Label(frame=(50, 350, 300, 40), font=('Helvetica', 24), alignment=ui.ALIGN_CENTER)
-
-    # Add subviews to the main view
-    view.add_subview(slot1)
-    view.add_subview(slot2)
-    view.add_subview(slot3)
-    view.add_subview(spin_button)
-    view.add_subview(result_label)
-
-    # Present the view
-    view.present('sheet')
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
